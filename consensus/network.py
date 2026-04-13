@@ -73,8 +73,18 @@ class ConsensusNetwork:
 
         Return a dict mapping agent_id -> list of neighbour ids.
         """
-        # TODO: implement
-        raise NotImplementedError
+        if topology == "fully_connected":
+          return {i: [j for j in range(self.n_agents) if j != i] for i in range(self.n_agents)}
+        elif topology == "ring":
+          return {i: [(i-1) % self.n_agents, (i+1) % self.n_agents] for i in range(self.n_agents)}
+        elif topology == "random":
+          graph = { i : [(i-1) % self.n_agents, (i+1) % self.n_agents] for i in range(self.n_agents)}
+          for i in range (self.n_agents):
+            for j in range(i+1, self.n_agents):
+              if np.random.rand() < random_edge_prob and j not in graph[i]:
+                graph[i].append(j)
+                graph[j].append(i)
+          return graph
 
     # ------------------------------------------------------------------
     # Simulation step
@@ -102,8 +112,13 @@ class ConsensusNetwork:
           logical times. The two-phase pattern ensures every agent reads
           the same generation of values.
         """
-        # TODO: implement
-        raise NotImplementedError
+        new_values: list[float] = []
+        for i, agent in enumerate(self.agents):
+          neighbour_values = [self.agents[j].value for j in self.graph[i]]
+          new_values.append(agent.compute_update(neighbour_values))
+        for agent, new_value in zip(self.agents, new_values):
+          agent.apply_update(new_value)
+        self.history.append(self.values.copy())
 
     def run(self, n_steps: int) -> np.ndarray:
         """
@@ -112,8 +127,9 @@ class ConsensusNetwork:
 
         Hint: just call self.step() in a loop.
         """
-        # TODO: implement
-        raise NotImplementedError
+        for _ in range(n_steps):
+          self.step()
+        return np.array(self.history)
 
     # ------------------------------------------------------------------
     # Properties
@@ -130,5 +146,4 @@ class ConsensusNetwork:
         Return True when all agents are within `tol` of each other.
         Hint: np.max(values) - np.min(values) < tol
         """
-        # TODO: implement
-        raise NotImplementedError
+        return np.max(self.values) - np.min(self.values) < tol
